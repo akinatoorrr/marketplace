@@ -1,0 +1,17 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      - id: ruff-format
+        name: ruff-format
+
+      - id: ruff
+        name: ruff (lint + isort + bandit)
+        args: [--fix]  # автоисправление ошибок и сортировка импортов
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: end-of-file-fixer  # добавляет \n в конец файлов
+      - id: trailing-whitespace  # убирает пробелы в конце строк
+      - id: check-added-large-files  # блокирует коммит больших файлов
