@@ -1,4 +1,6 @@
-from fastapi import HTTPException, Request, status
+from datetime import datetime, timedelta
+
+from fastapi import HTTPException, Request
 from jose import jwt
 from passlib.context import CryptContext
 from pydantic import EmailStr
@@ -26,20 +28,22 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(data: dict) -> str:
     """Функция создаёт и возвращает JWT-токен"""
     to_encode = data.copy()
-    to_encode.update({"exp": settings.ACCESS_TOKEN_EXPIRE_MINUTES})
+    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
     encode_jwt = jwt.encode(
         to_encode, settings.JWT_SECRET_KEY, algorithm=settings.ALGORITHM
     )
     return encode_jwt
 
 
-def get_token(request: Request):
-    """Функция получает токен из куки"""
-    token = request.cookies.get("users_access_token")
+def get_token(request: Request) -> str:
+    token = request.cookies.get("users_access_token") or request.headers.get(
+        "Authorization"
+    )
     if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Токен не найден!"
-        )
+        raise HTTPException(status_code=401, detail="Токен не найден!")
+    if token.startswith("Bearer "):
+        token = token[7:]
     return token
 
 

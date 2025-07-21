@@ -11,7 +11,7 @@ from src.app.schemas.schemas import UserAuth, UserRegistration
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.post("/register/")
+@router.post("/register/", status_code=status.HTTP_201_CREATED)
 async def register_user(user_data: UserRegistration) -> dict:
     user = await UsersDAO.get_user_or_none(email=user_data.email)
     if user:
