@@ -20,7 +20,7 @@ async def register_user(user_data: UserRegistration) -> dict:
         )
     user_dict = user_data.model_dump()
     user_dict["password"] = get_password_hash(user_data.password)
-    await UsersDAO.create_user(**user_dict)
+    await UsersDAO.add(**user_dict)
     return {
         "message": "Вы успешно зарегистрированы!"
     }  # Тут должен отправляться имейл через брокера и воркера
