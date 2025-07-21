@@ -24,7 +24,7 @@ class UsersDAO(BaseDAO):
 
     @classmethod
     async def get_user_or_none(
-        cls, **filter_param: dict[str, Any] | str
+        cls, **filter_param: dict[str, Any] | int
     ) -> User | None:
         """Возвращает пользователя или None"""
         async with async_session_maker() as session:

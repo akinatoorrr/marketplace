@@ -1,12 +1,13 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
-from fastapi import HTTPException, Request
-from jose import jwt
+from fastapi import Depends, HTTPException, Request, status
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import EmailStr
 
 from src.app.core.config import settings
 from src.app.db.dao import UsersDAO
+from src.app.db.models import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -45,6 +46,43 @@ def get_token(request: Request) -> str:
     if token.startswith("Bearer "):
         token = token[7:]
     return token
+
+
+async def get_current_user(token: str = Depends(get_token)) -> User:
+    """Декодирует токен и возвращает текущего пользователя"""
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
+        )
+    except JWTError as err:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Токен не валиден",
+        ) from err
+
+    expire = payload.get("exp")
+    if not expire:
+        raise HTTPException(
+            status_code=401, detail="Отсутствует время истечения токена"
+        )
+
+    expire_time = datetime.fromtimestamp(expire, tz=UTC)
+    if expire_time < datetime.now(UTC):
+        raise HTTPException(status_code=401, detail="Токен истек")
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=401, detail="ID пользователя не найден в токене"
+        )
+
+    user = await UsersDAO.get_user_or_none(id=int(user_id))
+    if not user:
+        raise HTTPException(status_code=401, detail="Пользователь не найден")
+
+    return user
 
 
 async def authenticate_user(email: EmailStr, password: str):

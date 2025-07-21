@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from src.app.api.v1.users.auth import get_current_user
 from src.app.db.dao import CategoryDAO, PostDAO
 from src.app.schemas.schemas import (
     CategoryCreate,
@@ -9,8 +10,12 @@ from src.app.schemas.schemas import (
     PostUpdate,
 )
 
-post_router = APIRouter(prefix="/posts", tags=["Posts"])
-category_router = APIRouter(prefix="/categories", tags=["Categories"])
+post_router = APIRouter(
+    prefix="/posts", tags=["Posts"], dependencies=[Depends(get_current_user)]
+)
+category_router = APIRouter(
+    prefix="/categories", tags=["Categories"], dependencies=[Depends(get_current_user)]
+)
 
 
 @post_router.get("/", summary="Получение списка статей", response_model=list[PostRead])
