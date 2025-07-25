@@ -14,6 +14,82 @@ services:
       interval: 30s
       timeout: 5s
       retries: 5
+    networks:
+      - backend
+
+  celery:
+    build: .
+    command: celery -A src.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    env_file: .env
+    networks:
+      - backend
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"     # Брокер
+      - "15672:15672"   # Web UI
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - backend
+
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"   # Web-интерфейс
+    networks:
+      - backend
+
+  fastapi:
+    build: .
+    command: uvicorn src.app.main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health/ || exit 1 " ]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    env_file: .env
+    networks:
+      - backend
+
+  alembic:
+    build: .
+    command: alembic upgrade head
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    networks:
+      - backend
+
 
 volumes:
   pg_data:
+
+networks:
+  backend:
+    driver: bridge
