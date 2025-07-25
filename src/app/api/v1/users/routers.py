@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Response, status
+from fastapi.concurrency import run_in_threadpool
 
 from src.app.api.v1.users.auth import (
     authenticate_user,
@@ -7,6 +8,7 @@ from src.app.api.v1.users.auth import (
 )
 from src.app.db.dao import UsersDAO
 from src.app.schemas.schemas import UserAuth, UserRegistration
+from src.celery_app import celery_app
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -21,9 +23,12 @@ async def register_user(user_data: UserRegistration) -> dict:
     user_dict = user_data.model_dump()
     user_dict["password"] = get_password_hash(user_data.password)
     await UsersDAO.add(**user_dict)
-    return {
-        "message": "Вы успешно зарегистрированы!"
-    }  # Тут должен отправляться имейл через брокера и воркера
+    await run_in_threadpool(
+        lambda: celery_app.send_task(
+            "src.tasks.email.send_email_task", args=[user_data.email]
+        )
+    )
+    return {"message": "Вы успешно зарегистрированы!"}
 
 
 @router.post("/login/")
