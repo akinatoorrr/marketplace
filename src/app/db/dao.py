@@ -1,9 +1,11 @@
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from .models import Category, DeletedPost, Post, User
 from .sessions import async_session_maker
+
+MAX_PAGE_SIZE = 100
 
 
 class BaseDAO:
@@ -16,6 +18,8 @@ class BaseDAO:
             async with session.begin():
                 new_instance = cls.model(**values)
                 session.add(new_instance)
+                await session.flush()
+                await session.refresh(new_instance)
             return new_instance
 
 
@@ -37,10 +41,20 @@ class BlogDAO(BaseDAO):
     model = None
 
     @classmethod
-    async def get_list(cls) -> list[Post] | list[Category]:
+    async def get_list(
+        cls,
+        category_id: int | None,
+        page_size: int | None,
+        page_number: int | None,
+    ) -> list[Post] | list[Category]:
         """Возвращает список"""
         async with async_session_maker() as session:
+            page_size = min(page_size or 10, MAX_PAGE_SIZE)
+            page_number = page_number or 1
             query = select(cls.model)
+            if category_id:
+                query = query.where(cls.model.category_id == category_id)
+            query = query.limit(page_size).offset((page_number - 1) * page_size)
             result = await session.execute(query)
             return result.scalars().all()
 
@@ -89,6 +103,24 @@ class PostDAO(BlogDAO):
                 session.add(deleted_post)
                 session.delete(post)
         return {"message": f"Пост с id={post.id} успешно удалён"}
+
+    @classmethod
+    async def search_posts(
+        cls, search_query: str, page_size: int | None, page_number: int | None
+    ) -> list[Post]:
+        async with async_session_maker() as session:
+            page_size = min(page_size or 10, MAX_PAGE_SIZE)
+            page_number = page_number or 1
+            # Используем plainto_tsquery для "простой" обработки поисковой строки
+            ts_query = func.plainto_tsquery("russian", search_query)
+            query = (
+                select(cls.model)
+                .where(cls.model.tsv.op("@@")(ts_query))
+                .limit(page_size)
+                .offset((page_number - 1) * page_size)
+            )
+            result = await session.execute(query)
+            return result.scalars().all()
 
 
 class CategoryDAO(BlogDAO):

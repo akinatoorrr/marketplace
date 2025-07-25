@@ -1,6 +1,7 @@
 import datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import relationship
 
 from src.app.db.sessions import Base
@@ -18,9 +19,12 @@ class Post(Base):
     text = Column(Text, nullable=False)
     category_id = Column(Integer, ForeignKey("category.id"), nullable=True)
     category = relationship("Category", back_populates="posts")
-    # image = Column()
+    image_key = Column(String(256), nullable=True)
+    tsv = Column(TSVECTOR)
     created_at = Column(DateTime, default=datetime.datetime.now())
-    updated_at = Column(DateTime, onupdate=datetime.datetime.now())
+    updated_at = Column(
+        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now()
+    )
 
 
 class Category(Base):
