@@ -1,7 +1,16 @@
 import re
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+    model_serializer,
+)
+
+from src.app.core.config import settings
 
 
 class UserRegistration(BaseModel):
@@ -62,6 +71,18 @@ class PostRead(PostBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    image_key: str | None = None
+    image_url: str | None = None
+
+    @model_serializer(mode="wrap")
+    def serializer(self, handler):
+        result = handler(self)
+        result["image_url"] = (
+            f"{settings.MINIO_ENDPOINT}/{settings.MINIO_BUCKET}/{self.image_key}"
+            if self.image_key
+            else None
+        )
+        return result
 
 
 class PostCreate(PostBase):
@@ -83,7 +104,6 @@ class CategoryRead(CategoryBase):
 
     id: int
     created_at: datetime
-    updated_at: datetime
 
 
 class CategoryCreate(CategoryBase):
