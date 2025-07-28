@@ -5,7 +5,7 @@ from src.app.core.minio_client import s3_client
 from src.app.db.dao import PostDAO
 
 
-async def create_post_service(title, text, category_id, image):
+async def create_post_service(session, title, text, category_id, image):
     image_key = None
     if image:
         ext = image.filename.split(".")[-1]
@@ -23,4 +23,4 @@ async def create_post_service(title, text, category_id, image):
         "category_id": category_id,
         "image_key": image_key,
     }
-    return await PostDAO.add(**post_data)
+    return await PostDAO.add(session, **post_data)

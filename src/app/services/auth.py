@@ -4,10 +4,12 @@ from fastapi import Depends, HTTPException, Request, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import EmailStr
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.core.config import settings
 from src.app.db.dao import UsersDAO
 from src.app.db.models import User
+from src.app.db.sessions import get_db_session
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -48,7 +50,9 @@ def get_token(request: Request) -> str:
     return token
 
 
-async def get_current_user(token: str = Depends(get_token)) -> User:
+async def get_current_user(
+    session: AsyncSession = Depends(get_db_session), token: str = Depends(get_token)
+) -> User:
     """Декодирует токен и возвращает текущего пользователя"""
     try:
         payload = jwt.decode(
@@ -78,18 +82,22 @@ async def get_current_user(token: str = Depends(get_token)) -> User:
             status_code=401, detail="ID пользователя не найден в токене"
         )
 
-    user = await UsersDAO.get_user_or_none(id=int(user_id))
+    user = await UsersDAO.get_user_or_none(session, id=int(user_id))
     if not user:
         raise HTTPException(status_code=401, detail="Пользователь не найден")
 
     return user
 
 
-async def authenticate_user(email: EmailStr, password: str):
+async def authenticate_user(
+    email: EmailStr,
+    password: str,
+    session: AsyncSession = Depends(get_db_session),
+):
     """Функция принимает почту и пароль
     и проверяет, есть ли такой пользователь в базе
     """
-    user = await UsersDAO.get_user_or_none(email=email)
+    user = await UsersDAO.get_user_or_none(session, email=email)
     if (
         not user
         or verify_password(plain_password=password, hashed_password=user.password)

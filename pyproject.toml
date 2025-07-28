@@ -27,7 +27,8 @@ dependencies = [
     "kombu[pyamqp] (>=5.5.4,<6.0.0)",
     "aiosmtplib (>=4.0.1,<5.0.0)",
     "email-validator (>=2.2.0,<3.0.0)",
-    "python-multipart (>=0.0.20,<0.0.21)"
+    "python-multipart (>=0.0.20,<0.0.21)",
+    "httpx (>=0.28.1,<0.29.0)"
 ]
 
 
@@ -76,3 +77,10 @@ quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
 docstring-code-format = true
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+norecursedirs = 'env/* venv/* ruff_cache/* alembic/*'
+testpaths = 'tests/'
+python_files = 'test_*.py'
+addopts = "-ra --strict-markers -v"
