@@ -42,7 +42,7 @@ async def auth_user(
     session: AsyncSession = Depends(get_db_session),
 ):
     check = await authenticate_user(
-        session, email=user_data.email, password=user_data.password
+        session=session, email=user_data.email, password=user_data.password
     )
     if check is None:
         raise HTTPException(

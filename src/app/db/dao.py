@@ -18,8 +18,7 @@ class BaseDAO:
         """Создаёт новый объект"""
         new_instance = cls.model(**values)
         session.add(new_instance)
-        await session.flush()
-        await session.refresh(new_instance)
+        await session.commit()
         return new_instance
 
 
@@ -98,7 +97,8 @@ class PostDAO(BlogDAO):
             updated_at=post.updated_at,
         )
         session.add(deleted_post)
-        session.delete(post)
+        await session.delete(post)
+        await session.commit()
         return {"message": f"Пост с id={post.id} успешно удалён"}
 
     @classmethod
