@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     MINIO_ACCESS_KEY: str
     MINIO_SECRET_KEY: str
     MINIO_REGION: str
+    MINIO_BUCKET: str
 
     class Config:
         env_file = ".env"

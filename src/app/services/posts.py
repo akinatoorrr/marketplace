@@ -1,22 +1,18 @@
-import uuid
-
-from src.app.core.config import settings
-from src.app.core.minio_client import s3_client
+from src.app.core.storage import generate_image_key, upload_file
 from src.app.db.dao import PostDAO
 
 
 async def create_post_service(session, title, text, category_id, image):
     image_key = None
+
     if image:
-        ext = image.filename.split(".")[-1]
-        image_key = f"images/posts/{uuid.uuid4()}.{ext}"
-        contents = await image.read()
-        s3_client.put_object(
-            Bucket=settings.MINIO_BUCKET,
-            Key=image_key,
-            Body=contents,
-            ContentType=image.content_type,
-        )
+        # 1. Генерация ключа
+        image_key = generate_image_key("images/posts", image.filename)
+
+        # 2. Загрузка в MinIO
+        await image.seek(0)  # на всякий случай возвращаем курсор в начало
+        upload_file(image.file, image_key, image.content_type)
+
     post_data = {
         "title": title,
         "text": text,

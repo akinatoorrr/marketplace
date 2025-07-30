@@ -10,7 +10,7 @@ from pydantic import (
     model_serializer,
 )
 
-from src.app.core.config import settings
+from src.app.core.storage import get_file_url
 
 
 class UserRegistration(BaseModel):
@@ -77,11 +77,7 @@ class PostRead(PostBase):
     @model_serializer(mode="wrap")
     def serializer(self, handler):
         result = handler(self)
-        result["image_url"] = (
-            f"{settings.MINIO_ENDPOINT}/{settings.MINIO_BUCKET}/{self.image_key}"
-            if self.image_key
-            else None
-        )
+        result["image_url"] = get_file_url(self.image_key) if self.image_key else None
         return result
 
 
