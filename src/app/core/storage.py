@@ -11,7 +11,11 @@ def generate_image_key(prefix: str, filename: str) -> str:
     prefix: "images/posts"
     filename: оригинальное имя файла для получения расширения.
     """
-    ext = filename.rsplit(".", 1)[-1]  # получаем расширение после последней точки
+    if "." not in filename:
+        raise ValueError("Некорректное имя файла: отсутствует расширение")
+    ext = filename.rsplit(".", 1)[
+        -1
+    ].lower()  # получаем расширение после последней точки
     unique = uuid.uuid4()  # генерируем UUID4
     return f"{prefix}/{unique}.{ext}"
 
