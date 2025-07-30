@@ -1,7 +1,7 @@
 """Create post and category tables
 
 Revision ID: 682d9452ad96
-Revises: 
+Revises:
 Create Date: 2025-07-20 00:48:26.721288
 
 """

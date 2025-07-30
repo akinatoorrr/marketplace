@@ -16,10 +16,10 @@ async def test_soft_delete_post(client, auth_headers, single_post):
         assert post.title == single_post["title"]
         break
 
-    response = await client.delete(f"posts/{single_post["id"]}")
+    response = await client.delete(f"posts/{single_post['id']}")
     data = response.json()
     assert response.status_code == 200
-    assert data["message"] == f"Пост с id={single_post["id"]} успешно удалён"
+    assert data["message"] == f"Пост с id={single_post['id']} успешно удалён"
 
     async for session in override_get_session_for_tests():
         result = await session.execute(

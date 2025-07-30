@@ -12,7 +12,7 @@ from src.app.core.config import settings
 from src.app.db import models  # noqa
 from src.app.db.sessions import Base
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
