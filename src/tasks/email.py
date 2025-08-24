@@ -7,7 +7,7 @@ from src.app.core.config import settings
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=10)
-def send_email_task(self, email_to: str):
+def send_email_task(self, email_to: str):  # type: ignore
     msg = EmailMessage()
     msg["Subject"] = "Добро пожаловать!"
     msg["From"] = "noreply@example.com"

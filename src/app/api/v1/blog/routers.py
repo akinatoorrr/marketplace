@@ -16,7 +16,7 @@ from src.app.db.sessions import get_db_session
 from src.app.schemas.category_schemas import CategoryCreate, CategoryRead
 from src.app.schemas.post_schemas import PostRead, PostUpdate
 from src.app.services.auth import get_current_user
-from src.app.services.posts import create_post_service
+from src.app.services.posts import create_post_service, search_or_get_post_list
 
 post_router = APIRouter(
     prefix="/posts", tags=["Posts"], dependencies=[Depends(get_current_user)]
@@ -36,11 +36,9 @@ async def list_posts(
     ),
     page_number: int = Query(1, ge=1, description="Номер страницы (по умолчанию 1)"),
 ) -> list[Post]:
-    if search:
-        posts = await PostDAO.search_posts(session, search, page_size, page_number)
-    else:
-        posts = await PostDAO.get_list(session, category_id, page_size, page_number)
-    return posts
+    return await search_or_get_post_list(
+        session, search, category_id, page_size, page_number
+    )
 
 
 @post_router.post(
@@ -56,8 +54,7 @@ async def create_post(
     category_id: int = Form(...),
     image: UploadFile | None = File(None),
 ) -> PostRead:
-    new_post = await create_post_service(session, title, text, category_id, image)
-    return new_post
+    return await create_post_service(session, title, text, category_id, image)
 
 
 @post_router.put("/{post_id}", summary="Редактирование статьи", response_model=PostRead)

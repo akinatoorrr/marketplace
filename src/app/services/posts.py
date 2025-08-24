@@ -29,3 +29,15 @@ async def create_post_service(
         "image_key": image_key,
     }
     return await PostDAO.add(session, **post_data)
+
+
+async def search_or_get_post_list(
+    session: AsyncSession,
+    search: str | None,
+    category_id: int | None,
+    page_size: int,
+    page_number: int,
+) -> list[Post]:
+    if search:
+        return await PostDAO.search_posts(session, search, page_size, page_number)
+    return await PostDAO.get_list(session, category_id, page_size, page_number)

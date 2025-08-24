@@ -12,6 +12,7 @@ from src.app.core.config import settings
 from src.app.db.models import User
 from src.app.db.sessions import get_db_session
 from src.app.db.users_dao import UsersDAO
+from src.app.schemas.users_schemas import UserRegistration
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -92,12 +93,25 @@ async def authenticate_user(
     email: EmailStr,
     password: str,
     session: AsyncSession = Depends(get_db_session),
-) -> User | None:
+) -> User:
     user = await UsersDAO.get_user_or_none(session, email=email)
     if (
         not user
         or verify_password(plain_password=password, hashed_password=user.password)
         is False
     ):
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверная почта или пароль"
+        )
     return user
+
+
+async def create_user(user_data: UserRegistration, session: AsyncSession) -> None:
+    user = await UsersDAO.get_user_or_none(session, email=user_data.email)
+    if user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Пользователь уже существует"
+        )
+    user_dict = user_data.model_dump()
+    user_dict["password"] = get_password_hash(user_data.password)
+    await UsersDAO.add(session, **user_dict)
