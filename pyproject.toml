@@ -9,7 +9,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi (>=0.116.1,<0.117.0)",
-    "sqlalchemy (>=2.0.41,<3.0.0)",
+    "sqlalchemy[mypy] (>=2.0.43,<3.0.0)",
     "uvicorn[standard] (>=0.35.0,<0.36.0)",
     "alembic (>=1.16.4,<2.0.0)",
     "asyncpg (>=0.30.0,<0.31.0)",
@@ -29,7 +29,8 @@ dependencies = [
     "email-validator (>=2.2.0,<3.0.0)",
     "python-multipart (>=0.0.20,<0.0.21)",
     "httpx (>=0.28.1,<0.29.0)",
-    "pytest-cov (>=6.2.1,<7.0.0)"
+    "pytest-cov (>=6.2.1,<7.0.0)",
+    "mypy (>=1.17.1,<2.0.0)",
 ]
 
 
@@ -38,26 +39,23 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
-# Указываем версию Python проекта
 target-version = "py312"
 
-# Максимальная длина строки (совместим с black)
 line-length = 88
 
-# Какие правила включать (по группам)
 select = [
-  "E",  # pycodestyle (PEP8)
-  "F",  # pyflakes (ошибки, неиспользуемые переменные)
-  "I",  # isort (сортировка импортов)
-  "B",  # flake8-bugbear (ошибки дизайна)
-  "S",  # bandit (безопасность)
-  "T20",  # flake8-print (печать в проде)
-  "UP",  # pyupgrade (советы по синтаксису)
+  "E",
+  "F",
+  "I",
+  "B",
+  "S",
+  "T20",
+  "UP",
 ]
 
 # Какие правила игнорировать
 ignore = [
-  "B008",  # не проверять передачу mutable default аргументов
+  "B008",
   "S101",
   "S310",
 ]
@@ -85,3 +83,22 @@ norecursedirs = 'env/* venv/* ruff_cache/* alembic/*'
 testpaths = 'tests/'
 python_files = 'test_*.py'
 addopts = "-ra --strict-markers -v"
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+disallow_any_unimported = false
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+files = ["src"]
+exclude = "tests/|alembic/|src/app/db/models/|src/app/db/test_sessions/"
+
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true

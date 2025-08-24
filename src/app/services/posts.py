@@ -1,19 +1,28 @@
+from typing import Any
+
+from fastapi import UploadFile
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.app.core.storage import generate_image_key, upload_file
 from src.app.db.dao import PostDAO
+from src.app.db.models import Post
 
 
-async def create_post_service(session, title, text, category_id, image):
-    image_key = None
+async def create_post_service(
+    session: AsyncSession,
+    title: str,
+    text: str,
+    category_id: int,
+    image: UploadFile | None,
+) -> Post:
+    image_key: str | None = None
 
-    if image:
-        # 1. Генерация ключа
+    if image and image.filename and image.content_type:
         image_key = generate_image_key("images/posts", image.filename)
-
-        # 2. Загрузка в MinIO
-        await image.seek(0)  # на всякий случай возвращаем курсор в начало
+        await image.seek(0)
         upload_file(image.file, image_key, image.content_type)
 
-    post_data = {
+    post_data: dict[str, Any] = {
         "title": title,
         "text": text,
         "category_id": category_id,

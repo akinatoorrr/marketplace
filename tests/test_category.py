@@ -29,4 +29,4 @@ async def test_create_category(client, auth_headers):
         category = result.scalar_one_or_none()
         assert category is not None
         assert category.title == unique_title
-        break  # Нужна только одна сессия
+        break

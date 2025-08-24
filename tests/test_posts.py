@@ -31,7 +31,7 @@ async def test_create_post(client, auth_headers, category_for_post):
         post = result.scalar_one_or_none()
         assert post is not None
         assert post.title == unique_title
-        break  # Нужна только одна сессия
+        break
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,6 @@
-from typing import Any
+from typing import Any, Protocol, TypeVar, cast
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import Category, DeletedPost, Post, User
@@ -8,67 +8,83 @@ from .models import Category, DeletedPost, Post, User
 MAX_PAGE_SIZE = 100
 
 
-class BaseDAO:
-    model = None
+class ORMModel(Protocol):
+    """Минимальный контракт для ORM-моделей, используемый в DAO."""
+
+    id: int
+
+
+class HasCategory(Protocol):
+    """Модели с полем category_id (для BlogDAO)."""
+
+    category_id: int
+
+
+class CategorizedModel(ORMModel, HasCategory):
+    """Комбинация ORMModel + HasCategory."""
+
+    ...
+
+
+T = TypeVar("T", bound=ORMModel)
+TCat = TypeVar("TCat", bound=CategorizedModel)
+
+
+class BaseDAO[T: ORMModel]:
+    model: type[T]
 
     @classmethod
-    async def add(
-        cls, session: AsyncSession, **values: dict[str, Any]
-    ) -> User | Post | Category:
-        """Создаёт новый объект"""
-        new_instance = cls.model(**values)
+    async def add(cls, session: AsyncSession, **values: Any) -> T:
+        new_instance = cast(T, cls.model(**values))
         session.add(new_instance)
         await session.commit()
         return new_instance
 
 
-class UsersDAO(BaseDAO):
+class UsersDAO(BaseDAO[User]):
     model = User
 
     @classmethod
     async def get_user_or_none(
-        cls, session: AsyncSession, **filter_param: dict[str, Any] | int
+        cls, session: AsyncSession, **filter_param: Any
     ) -> User | None:
-        """Возвращает пользователя или None"""
         query = select(User).filter_by(**filter_param)
         result = await session.execute(query)
-        return result.scalar_one_or_none()
+        return cast(User | None, result.scalar_one_or_none())
 
 
-class BlogDAO(BaseDAO):
-    model = None
+class BlogDAO[TCat: CategorizedModel](BaseDAO[TCat]):
+    model: type[TCat]
 
     @classmethod
     async def get_list(
         cls,
         session: AsyncSession,
-        category_id: int | None,
-        page_size: int | None,
-        page_number: int | None,
-    ) -> list[Post] | list[Category]:
-        """Возвращает список"""
+        category_id: int | None = None,
+        page_size: int | None = 10,
+        page_number: int | None = 1,
+    ) -> list[TCat]:
         page_size = min(page_size or 10, MAX_PAGE_SIZE)
         page_number = page_number or 1
         query = select(cls.model)
-        if category_id:
+        if category_id is not None:
             query = query.where(cls.model.category_id == category_id)
         query = query.limit(page_size).offset((page_number - 1) * page_size)
         result = await session.execute(query)
-        return result.scalars().all()
+        return cast(list[TCat], result.scalars().all())
 
 
-class PostDAO(BlogDAO):
+class PostDAO(BlogDAO[Post]):
     model = Post
     soft_delete_to = DeletedPost
 
     @classmethod
     async def edit_post(
-        cls, session: AsyncSession, post_id: int, **values: dict[str, Any] | str
+        cls, session: AsyncSession, post_id: int, **values: Any
     ) -> Post | None:
-        """Изменение поста"""
         query = select(cls.model).filter_by(id=post_id)
         result = await session.execute(query)
-        post = result.scalar_one_or_none()
+        post = cast(Post | None, result.scalar_one_or_none())
         if not post:
             raise ValueError("Post not found")
         for key, value in values.items():
@@ -80,12 +96,9 @@ class PostDAO(BlogDAO):
     async def soft_delete_post(
         cls, session: AsyncSession, post_id: int
     ) -> dict[str, Any]:
-        """Мягкое удаление поста с переносом его
-        в отдельную таблицу и удалением из основной
-        """
         query = select(cls.model).filter_by(id=post_id)
         result = await session.execute(query)
-        post = result.scalar_one_or_none()
+        post = cast(Post | None, result.scalar_one_or_none())
         if not post:
             raise ValueError("Post not found")
         deleted_post = cls.soft_delete_to(
@@ -101,27 +114,6 @@ class PostDAO(BlogDAO):
         await session.commit()
         return {"message": f"Пост с id={post.id} успешно удалён"}
 
-    @classmethod
-    async def search_posts(
-        cls,
-        session: AsyncSession,
-        search_query: str,
-        page_size: int | None,
-        page_number: int | None,
-    ) -> list[Post]:
-        page_size = min(page_size or 10, MAX_PAGE_SIZE)
-        page_number = page_number or 1
-        # Используем plainto_tsquery для "простой" обработки поисковой строки
-        ts_query = func.plainto_tsquery("russian", search_query)
-        query = (
-            select(cls.model)
-            .where(cls.model.tsv.op("@@")(ts_query))
-            .limit(page_size)
-            .offset((page_number - 1) * page_size)
-        )
-        result = await session.execute(query)
-        return result.scalars().all()
 
-
-class CategoryDAO(BlogDAO):
+class CategoryDAO(BlogDAO[Category]):
     model = Category

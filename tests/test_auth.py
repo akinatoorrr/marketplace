@@ -33,7 +33,7 @@ async def test_user_registration(mock_send_task, client):
         user = result.scalar_one_or_none()
         assert user is not None
         assert user.email == unique_email
-        break  # Нужна только одна сессия
+        break
 
 
 def test_jwt_creation():

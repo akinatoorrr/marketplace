@@ -1,4 +1,6 @@
+# src/app/services/auth.py
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 
 from fastapi import Depends, HTTPException, Request, status
 from jose import JWTError, jwt
@@ -15,36 +17,31 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def get_password_hash(password: str) -> str:
-    """Функция принимает пароль в виде строки
-    и возвращает его безопасный хэш.
-    """
-    return pwd_context.hash(password)
+    return cast(str, pwd_context.hash(password))
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Функция принимает обычный пароль и его хэш,
-    возвращая True, если пароль соответствует хэшу
-    """
-    return pwd_context.verify(plain_password, hashed_password)
+    return cast(bool, pwd_context.verify(plain_password, hashed_password))
 
 
-def create_access_token(data: dict) -> str:
-    """Функция создаёт и возвращает JWT-токен"""
+def create_access_token(data: dict[str, Any]) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
-    encode_jwt = jwt.encode(
-        to_encode, settings.JWT_SECRET_KEY, algorithm=settings.ALGORITHM
+    encode_jwt = cast(
+        str,
+        jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.ALGORITHM),
     )
     return encode_jwt
 
 
 def get_token(request: Request) -> str:
-    token = request.cookies.get("users_access_token") or request.headers.get(
+    token_any: Any = request.cookies.get("users_access_token") or request.headers.get(
         "Authorization"
     )
-    if not token:
+    if not token_any:
         raise HTTPException(status_code=401, detail="Токен не найден!")
+    token = cast(str, token_any)
     if token.startswith("Bearer "):
         token = token[7:]
     return token
@@ -53,12 +50,14 @@ def get_token(request: Request) -> str:
 async def get_current_user(
     session: AsyncSession = Depends(get_db_session), token: str = Depends(get_token)
 ) -> User:
-    """Декодирует токен и возвращает текущего пользователя"""
     try:
-        payload = jwt.decode(
-            token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.ALGORITHM],
+        payload = cast(
+            dict[str, Any],
+            jwt.decode(
+                token,
+                settings.JWT_SECRET_KEY,
+                algorithms=[settings.ALGORITHM],
+            ),
         )
     except JWTError as err:
         raise HTTPException(
@@ -72,7 +71,7 @@ async def get_current_user(
             status_code=401, detail="Отсутствует время истечения токена"
         )
 
-    expire_time = datetime.fromtimestamp(expire, tz=UTC)
+    expire_time = datetime.fromtimestamp(cast(float, expire), tz=UTC)
     if expire_time < datetime.now(UTC):
         raise HTTPException(status_code=401, detail="Токен истек")
 
@@ -82,7 +81,7 @@ async def get_current_user(
             status_code=401, detail="ID пользователя не найден в токене"
         )
 
-    user = await UsersDAO.get_user_or_none(session, id=int(user_id))
+    user = await UsersDAO.get_user_or_none(session, id=int(cast(int, user_id)))
     if not user:
         raise HTTPException(status_code=401, detail="Пользователь не найден")
 
@@ -93,10 +92,7 @@ async def authenticate_user(
     email: EmailStr,
     password: str,
     session: AsyncSession = Depends(get_db_session),
-):
-    """Функция принимает почту и пароль
-    и проверяет, есть ли такой пользователь в базе
-    """
+) -> User | None:
     user = await UsersDAO.get_user_or_none(session, email=email)
     if (
         not user

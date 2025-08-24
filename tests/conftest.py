@@ -18,7 +18,6 @@ from .utils import unique_blog_title, unique_username_email
 
 @pytest.fixture(scope="session")
 def event_loop():
-    """Фикстура для общего ивент лупа для сессии"""
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
@@ -32,13 +31,11 @@ def patch_celery_send_task():
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def prepare_database():
-    """Фикстура, создающая таблицы в БД"""
     await init_test_db()
 
 
 @pytest_asyncio.fixture
 async def auth_headers(client):
-    """Возвращает заголовок с JWT-токеном для дальнейшего тестирования"""
     unique_username, unique_email = unique_username_email()
     payload = {
         "email": unique_email,
@@ -47,16 +44,16 @@ async def auth_headers(client):
         "phone_number": "+79990000000",
     }
     reg_resp = await client.post("/auth/register/", json=payload)
-    assert (
-        reg_resp.status_code == 201
-    ), f"User register failed: {reg_resp.status_code} {reg_resp.json()}"
+    assert reg_resp.status_code == 201, (
+        f"User register failed: {reg_resp.status_code} {reg_resp.json()}"
+    )
     login_resp = await client.post(
         "/auth/login/",
         json={"email": payload["email"], "password": payload["password"]},
     )
-    assert (
-        login_resp.status_code == 200
-    ), f"User login failed: {login_resp.status_code} {login_resp.json()}"
+    assert login_resp.status_code == 200, (
+        f"User login failed: {login_resp.status_code} {login_resp.json()}"
+    )
     token = login_resp.cookies.get("users_access_token")
     headers = {"Authorization": f"Bearer {token}"}
     yield headers
@@ -72,8 +69,6 @@ async def auth_headers(client):
 
 @pytest_asyncio.fixture(scope="function")
 async def client():
-    """Фикстура для клиента FastAPI с подменой зависимостей"""
-
     def get_test_db_session():
         async def _get_session():
             async for session in override_get_session_for_tests():
@@ -92,9 +87,9 @@ async def category_for_post(client, auth_headers):
     unique_title = unique_blog_title()
     payload = {"title": unique_title}
     response = await client.post("/categories/", json=payload, headers=auth_headers)
-    assert (
-        response.status_code == 201
-    ), f"Category creation failed: {response.status_code} {response.json()}"
+    assert response.status_code == 201, (
+        f"Category creation failed: {response.status_code} {response.json()}"
+    )
     category = response.json()
     yield category
 
@@ -121,9 +116,9 @@ async def single_post(client, auth_headers, category_for_post):
         "category_id": category_for_post.get("id"),
     }
     response = await client.post("/posts/", data=payload, headers=auth_headers)
-    assert (
-        response.status_code == 201
-    ), f"Post creation failed: {response.status_code} {response.json()}"
+    assert response.status_code == 201, (
+        f"Post creation failed: {response.status_code} {response.json()}"
+    )
     post = response.json()
     yield post
 
