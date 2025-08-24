@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.app.db.dao import UsersDAO
 from src.app.db.sessions import get_db_session
-from src.app.schemas.schemas import UserAuth, UserRegistration
+from src.app.db.users_dao import UsersDAO
+from src.app.schemas.users_schemas import UserAuth, UserRegistration
 from src.app.services.auth import (
     authenticate_user,
     create_access_token,
@@ -40,7 +40,7 @@ async def auth_user(
     response: Response,
     user_data: UserAuth,
     session: AsyncSession = Depends(get_db_session),
-):
+) -> dict:
     check = await authenticate_user(
         session=session, email=user_data.email, password=user_data.password
     )
@@ -54,6 +54,6 @@ async def auth_user(
 
 
 @router.post("/logout/")
-async def logout_user(response: Response):
+async def logout_user(response: Response) -> dict:
     response.delete_cookie(key="users_access_token")
     return {"message": "Пользователь успешно вышел из системы"}

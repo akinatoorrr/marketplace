@@ -4,8 +4,8 @@ from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.core.storage import generate_image_key, upload_file
-from src.app.db.dao import PostDAO
 from src.app.db.models import Post
+from src.app.db.post_dao import PostDAO
 
 
 async def create_post_service(

@@ -9,9 +9,9 @@ from pydantic import EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.app.core.config import settings
-from src.app.db.dao import UsersDAO
 from src.app.db.models import User
 from src.app.db.sessions import get_db_session
+from src.app.db.users_dao import UsersDAO
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

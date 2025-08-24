@@ -3,21 +3,18 @@ from fastapi import (
     Depends,
     File,
     Form,
-    HTTPException,
     Query,
     UploadFile,
     status,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.app.db.dao import CategoryDAO, PostDAO
+from src.app.db.category_dao import CategoryDAO
+from src.app.db.models import Category, Post
+from src.app.db.post_dao import PostDAO
 from src.app.db.sessions import get_db_session
-from src.app.schemas.schemas import (
-    CategoryCreate,
-    CategoryRead,
-    PostRead,
-    PostUpdate,
-)
+from src.app.schemas.category_schemas import CategoryCreate, CategoryRead
+from src.app.schemas.post_schemas import PostRead, PostUpdate
 from src.app.services.auth import get_current_user
 from src.app.services.posts import create_post_service
 
@@ -38,7 +35,7 @@ async def list_posts(
         10, ge=1, le=100, description="Размер страницы (по умолчанию 10, максимум 100)"
     ),
     page_number: int = Query(1, ge=1, description="Номер страницы (по умолчанию 1)"),
-):
+) -> list[Post]:
     if search:
         posts = await PostDAO.search_posts(session, search, page_size, page_number)
     else:
@@ -58,40 +55,26 @@ async def create_post(
     text: str = Form(...),
     category_id: int = Form(...),
     image: UploadFile | None = File(None),
-):
-    # 1. Если есть файл — загружаем его в MinIO
-    try:
-        new_post = await create_post_service(session, title, text, category_id, image)
-        return new_post
-    except Exception as err:
-        raise HTTPException(
-            status_code=500, detail="Ошибка загрузки изображения"
-        ) from err
+) -> PostRead:
+    new_post = await create_post_service(session, title, text, category_id, image)
+    return new_post
 
 
 @post_router.put("/{post_id}", summary="Редактирование статьи", response_model=PostRead)
 async def edit_post(
     post_id: int, edit_data: PostUpdate, session: AsyncSession = Depends(get_db_session)
-):
-    try:
-        updated_post = await PostDAO.edit_post(
-            session, post_id, **edit_data.model_dump(exclude_none=True)
-        )
-        return updated_post
-    except ValueError as err:
-        raise HTTPException(
-            status_code=404, detail="Пост с таким id не найден"
-        ) from err
+) -> PostRead:
+    updated_post = await PostDAO.edit_post(
+        session, post_id, **edit_data.model_dump(exclude_none=True)
+    )
+    return PostRead.model_validate(updated_post)
 
 
 @post_router.delete("/{post_id}", summary="Удаление статьи")
-async def delete_post(post_id: int, session: AsyncSession = Depends(get_db_session)):
-    try:
-        return await PostDAO.soft_delete_post(session, post_id)
-    except ValueError as err:
-        raise HTTPException(
-            status_code=404, detail="Пост с таким id не найден"
-        ) from err
+async def delete_post(
+    post_id: int, session: AsyncSession = Depends(get_db_session)
+) -> dict:
+    return await PostDAO.soft_delete_post(session, post_id)
 
 
 @category_router.get(
@@ -103,7 +86,7 @@ async def get_category_list(
         10, ge=1, le=100, description="Размер страницы (по умолчанию 10, максимум 100)"
     ),
     page_number: int = Query(1, ge=1, description="Номер страницы (по умолчанию 1)"),
-):
+) -> list[Category]:
     return await CategoryDAO.get_list(session, None, page_size, page_number)
 
 
@@ -115,5 +98,5 @@ async def get_category_list(
 )
 async def create_category(
     category_data: CategoryCreate, session: AsyncSession = Depends(get_db_session)
-):
+) -> CategoryRead:
     return await CategoryDAO.add(session, **category_data.model_dump())
