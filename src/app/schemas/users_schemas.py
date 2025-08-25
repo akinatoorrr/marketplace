@@ -35,3 +35,12 @@ class UserAuth(BaseModel):
     password: str = Field(
         ..., min_length=5, max_length=50, description="Пароль, от 5 до 50 знаков"
     )
+
+
+class UserRegisterResponse(BaseModel):
+    message: str
+
+
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str | None
