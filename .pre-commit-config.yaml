@@ -1,0 +1,34 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.10
+    hooks:
+      - id: ruff-format
+        name: ruff-format
+
+      - id: ruff
+        name: ruff (lint + isort + bandit)
+        args: [--fix]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.17.1
+    hooks:
+      - id: mypy
+        name: mypy (type checking)
+        args:
+          - --ignore-missing-imports
+          - --disallow-untyped-defs
+          - --check-untyped-defs
+        additional_dependencies:
+         - pydantic>=2.0
+         - pydantic-settings
+         - 'sqlalchemy[mypy]>=2.0.41,<3.0.0'
+        files: ^src/
+        exclude: ^src/app/db/test_sessions/|^src/app/db/models/
