@@ -57,11 +57,12 @@ class PostDAO(BlogDAO[Post]):
     ) -> list[Post]:
         page_size = min(page_size or 10, MAX_PAGE_SIZE)
         page_number = page_number or 1
-        # Используем plainto_tsquery для "простой" обработки поисковой строки
-        ts_query = func.plainto_tsquery("russian", search_query)
+        ts_query = func.websearch_to_tsquery("russian", search_query)
+        rank = func.ts_rank_cd(cls.model.tsv, ts_query)
         query = (
             select(cls.model)
             .where(cls.model.tsv.op("@@")(ts_query))
+            .order_by(rank.desc())
             .limit(page_size)
             .offset((page_number - 1) * page_size)
         )
